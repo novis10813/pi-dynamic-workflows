@@ -11,7 +11,7 @@ The record originated in [Whamp/pi-dynamic-workflows#23](https://github.com/Wham
 | Capability summary | `description` and `promptSnippet` in [`src/workflow-tool.ts`](../src/workflow-tool.ts) |
 | First-attempt script syntax and composition | `script.description` in [`src/workflow-tool.ts`](../src/workflow-tool.ts) |
 | Background and outer resource controls | Their parameter descriptions plus runtime behavior |
-| Workflow authorization | The single `WORKFLOW_GATE_GUIDELINE`; #93 supersedes the older exact selection wording below |
+| Workflow authorization | The single `WORKFLOW_GATE_GUIDELINE`; authorization permits use without requiring it |
 | Detailed authoring policy | The on-demand [`workflow-authoring` skill](../skills/workflow-authoring/SKILL.md), not permanent prompt guidelines |
 | Exact capability facts | The executable contract and generated [workflow-authoring reference](workflow-authoring.md) |
 | Dynamic model routes and agent types | Active user and project configuration, not static prompt catalogues |
@@ -36,16 +36,16 @@ Run a deterministic JavaScript workflow. Required script header: export const me
 with:
 
 ```text
-Delegate substantive independent or staged work to subagents with a JavaScript workflow, optionally composing agent calls with parallel(), pipeline(), or both
+Run a complete JavaScript-managed workflow in the background and automatically report its result.
 ```
 
 #### Reasoning
 
-The Available-tools entry should tell the parent model what the workflow tool does when the model selects a tool. The replacement names the tool's purpose, suitable task scale, and supported composition shapes.
+The Available-tools entry should tell the parent model what the workflow tool does when the model selects a tool. The replacement names a complete managed process and its default background result delivery, rather than ordinary subagent delegation.
 
 The old entry duplicated the required `meta` declaration from the `script` parameter description. Keeping that syntax in the parameter schema gives it one authoritative home and keeps the Available-tools entry focused on capability.
 
-The phrase `parallel(), pipeline(), or both` covers simple workflows that use neither helper and composed workflows that use either helper or both. It names the real functions instead of implying that “parallel agents” and “pipeline agents” are distinct agent types.
+Composition helpers remain discoverable in the script schema; the capability summary does not duplicate authoring mechanics.
 
 The replacement also removes the claim that the workflow is deterministic. The runtime restricts nondeterministic script APIs, but real subagent output remains nondeterministic.
 
@@ -61,7 +61,7 @@ The schema-comprehension experiment showed that the tool definition and schema s
 
 Confidence is high that `promptSnippet` should describe capability while `script.description` owns the metadata syntax. Confidence is moderate that removing the duplicated header causes no authoring regression because the existing experiment did not isolate that variable.
 
-### Focus the tool description on delegation
+### Focus the tool description on a complete managed process
 
 Replace:
 
@@ -72,16 +72,16 @@ Execute a deterministic JavaScript workflow that orchestrates multiple subagents
 with:
 
 ```text
-Run a JavaScript workflow that delegates work to subagents with agent(), optionally composing calls with parallel() and pipeline().
+Run a complete JavaScript-managed workflow in the background and automatically report its result.
 ```
 
 #### Reasoning
 
 The provider-visible tool description should state the capability, while the `script` parameter description owns exact input syntax. Removing the metadata declaration and raw-script requirements from the description leaves one authoritative home for those facts.
 
-“JavaScript workflow” distinguishes this constrained orchestration environment from a general JavaScript runner. “Delegates work” follows the approved domain language used for workflow selection and agent work units.
+“Complete JavaScript-managed workflow” distinguishes this tool from ordinary subagent delegation and a general JavaScript runner. Background execution and automatic reporting describe its default lifecycle.
 
-The runtime requires at least one `agent()` invocation but not multiple subagents. `parallel()` and `pipeline()` are optional composition helpers, so the new description identifies `agent()` as the delegation primitive and marks composition as optional.
+The runtime requires at least one `agent()` invocation but not multiple subagents. `parallel()` and `pipeline()` are optional composition helpers, and their mechanics remain in the script schema rather than the capability summary.
 
 The old “deterministic” claim described only the restricted orchestration shell. Subagent model output remains nondeterministic, making the claim misleading for the tool as a whole.
 
@@ -437,47 +437,38 @@ Exact-copy tests also remain inappropriate for prose that may receive harmless e
 
 Confidence is very high that guideline-count and byte-level ratchet tests should be omitted while behavioral, static-guidance, and placement assertions remain.
 
-### Require explicit workflow intent
+### Distinguish workflow authorization from required execution
 
-Replace:
+The single permanent gate is:
 
 ```text
-Use workflow only when the user explicitly asks for a workflow, workflows, fan-out, or multi-agent orchestration.
+Use `workflow` for a complete, programmatically managed process, not ordinary subagent delegation. Only use it when authorized; an armed turn permits use but does not require it.
 ```
 
-and:
+Keyword and standing-effort paths append only:
 
 ```text
-For workflow, prefer it for decomposable work: repository inspection, independent research/checks, multi-perspective review, or fan-out/fan-in synthesis. Do not use it for a single quick file read/edit or when ordinary tools are enough.
+[Workflow use is authorized for this turn, not required.
+Reason: <reason>.]
 ```
 
-with:
+The reason is `workflow trigger word detected` or `standing effort mode`. An explicit `/workflows run` instead appends:
 
 ```text
-Use workflow only for explicit workflow intent: a request for a workflow, subagent delegation, fan-out, or multi-agent orchestration, or an enabled mode that requires workflow. Use ordinary tools for work you can perform directly.
+[The user explicitly requested a workflow run. Call the `workflow` tool.]
 ```
 
 #### Reasoning
 
-Workflow selection is an authorization decision rather than a test of whether a parent model can recognize decomposable work. One run permits up to 1,000 agents, up to 16 concurrently, and no token budget by default. A capable model can choose an appropriate topology after authorization, but it cannot infer the user's tolerance for that potential expense from task complexity alone.
+Authorization and tool selection are separate decisions. A decomposable task or ordinary subagent request does not itself demand a complete programmatically managed workflow. Keyword and effort arming permit the model to select it, but do not require use even for substantive tasks. Only the explicit run command requests execution.
 
-The boundary does not require a magic trigger word. Explicit intent includes a direct workflow request, delegation to even one subagent, fan-out, multi-agent orchestration, or standing intent established by an enabled workflow or effort mode. The runtime requires at least one agent rather than multiple agents, so singular subagent delegation is valid.
+The shared authorization banner makes a separate effort conversational-escape injection redundant. Effort tiers retain thoroughness, reviewer breadth, model-tier, and resource guidance, conditional on selecting a workflow. Trigger detection, tool activation, and runtime behavior are unchanged.
 
-Enabled modes must count because the extension deliberately transforms matching messages into a workflow requirement. Recognizing that standing opt-in prevents the permanent guidance from conflicting with the extension's own trigger behavior.
+Background delivery belongs in the identical tool description and snippet and the existing background parameter schema, not repeated in every turn banner. Scale authorization remains separate from selection.
 
-“Work you can perform directly” replaces arbitrary one-read, one-edit, and one-command tests. Decomposability shapes the workflow after selection; it does not independently authorize delegation.
+#### Evidence and limits
 
-Permission to use workflow is distinct from permission for a large fan-out. Scale policy remains a separate operational decision so this selection rule stays focused.
-
-#### Evidence
-
-The workflow runtime enforces a 1,000-agent total cap and a 16-agent concurrency cap, while `tokenBudget` is unbounded by default. The workflow editor's forced-mode prompt requires at least one `agent()` call even for a small task. See [`src/config.ts`](../src/config.ts), [`src/workflow-tool.ts`](../src/workflow-tool.ts), and [`src/workflow-editor.ts`](../src/workflow-editor.ts).
-
-The schema-comprehension experiment showed that all four tested parent models selected the workflow tool for an explicit orchestration request. It did not test autonomous workflow selection, so it supports comprehension of explicit intent rather than broad autonomous permission. See [What the workflow schema teaches parent models](https://github.com/Whamp/pi-dynamic-workflows/blob/f8b6f5c34e9476e014d2906a257344e410a00364/docs/research/workflow-schema-comprehension.md).
-
-#### Confidence
-
-Confidence is high that potentially high-scale delegation requires explicit current or standing user intent, that one-subagent delegation is valid intent, and that ordinary tools should handle work the parent can perform directly. Large-fan-out authorization should be decided separately from workflow selection.
+Exact-text unit tests cover the gate, both reason paths, the forced banner, and matching capability summaries. These verify wording and placement, not provider behavior. Existing schema-comprehension evidence supports authoring for explicit orchestration requests; it does not establish that arming should force tool use.
 
 ### Scope each agent at a natural, context-sized boundary
 

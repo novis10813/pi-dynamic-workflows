@@ -141,7 +141,7 @@ The installed extension generates this compact index from its executable capabil
 /code-review 42
 ```
 
-For an always-on exhaustive mode, use `/ultracode`; `/effort high` is the lighter standing option.
+For standing exhaustive effort, use `/ultracode`; `/effort high` is the lighter option. Keyword and effort arming authorize workflow use for the turn but do not require it, even for substantive tasks. Use `workflow` for a complete, programmatically managed process, not ordinary subagent delegation. `/workflows run` explicitly requests a workflow run. Effort-tier fan-out guidance applies only if a workflow is selected.
 
 These same 5 patterns are also reachable by name without a slash command — Pi can recognize a decomposable request and run the matching curated pattern directly:
 

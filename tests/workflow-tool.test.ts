@@ -51,12 +51,11 @@ test("createWorkflowTool has correct name and label", () => {
   assert.equal(tool.label, "Workflow");
 });
 
-test("createWorkflowTool description states its delegation capability", () => {
-  const description = createWorkflowTool().description;
-
-  assert.match(description, /JavaScript workflow.*delegates work to subagents/i);
-  assert.match(description, /agent\(\).*optionally composing calls.*parallel\(\).*pipeline\(\)/i);
-  assert.doesNotMatch(description, /deterministic|required raw JavaScript|export const meta/i);
+test("createWorkflowTool description states the complete background process capability", () => {
+  assert.equal(
+    createWorkflowTool().description,
+    "Run a complete JavaScript-managed workflow in the background and automatically report its result.",
+  );
 });
 
 test("createWorkflowTool has parameters defined", () => {
@@ -75,24 +74,18 @@ test("createWorkflowTool has renderCall and renderResult", () => {
   assert.equal(typeof tool.renderResult, "function");
 });
 
-test("createWorkflowTool promptSnippet describes delegation and optional composition", () => {
-  const snippet = createWorkflowTool().promptSnippet;
-
-  assert.match(snippet, /delegate substantive .* work to subagents/i);
-  assert.match(snippet, /optionally composing agent calls/i);
-  assert.match(snippet, /parallel\(\)/);
-  assert.match(snippet, /pipeline\(\)/);
-  assert.match(snippet, /or both/i);
-  assert.doesNotMatch(snippet, /required script header|export const meta/i);
+test("createWorkflowTool promptSnippet matches its capability description", () => {
+  const tool = createWorkflowTool();
+  assert.equal(tool.promptSnippet, tool.description);
 });
 
-test("createWorkflowTool keeps permanent guidance to the single upstream gate", () => {
+test("createWorkflowTool keeps permanent guidance to the single authorization gate", () => {
   const guidance = createWorkflowTool().promptGuidelines;
-
   assert.deepEqual(guidance, [WORKFLOW_GATE_GUIDELINE]);
-  assert.match(guidance[0], /ONLY call it when the user explicitly opts in/i);
-  assert.match(guidance[0], /you may briefly offer it \(with a rough cost\)/i);
-  assert.doesNotMatch(guidance[0], /export const meta|parallel\(\) requires functions/i);
+  assert.equal(
+    guidance[0],
+    "Use `workflow` for a complete, programmatically managed process, not ordinary subagent delegation. Only use it when authorized; an armed turn permits use but does not require it.",
+  );
 });
 
 test("createWorkflowTool permanent guidance omits conditional catalogs and recipes", () => {

@@ -22,7 +22,7 @@ import { loadWorkflowSettings } from "./workflow-settings.js";
 
 /** The single always-on gate that authorizes workflow use without forcing it. */
 export const WORKFLOW_GATE_GUIDELINE =
-  "The `workflow` tool runs multi-agent orchestration — it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in — via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '并行审一遍'). For any other task — even one that would clearly benefit — do not call it; you may briefly offer it (with a rough cost) as an option instead.";
+  "Use `workflow` for a complete, programmatically managed process, not ordinary subagent delegation. Only use it when authorized; an armed turn permits use but does not require it.";
 
 const workflowToolSchema = Type.Object({
   script: Type.Optional(
@@ -184,10 +184,8 @@ export function createWorkflowTool(options: WorkflowToolOptions = {}): ToolDefin
   return defineTool({
     name: "workflow",
     label: "Workflow",
-    description:
-      "Run a JavaScript workflow that delegates work to subagents with agent(), optionally composing calls with parallel() and pipeline().",
-    promptSnippet:
-      "Delegate substantive independent or staged work to subagents with a JavaScript workflow, optionally composing agent calls with parallel(), pipeline(), or both",
+    description: "Run a complete JavaScript-managed workflow in the background and automatically report its result.",
+    promptSnippet: "Run a complete JavaScript-managed workflow in the background and automatically report its result.",
     get promptGuidelines() {
       return [WORKFLOW_GATE_GUIDELINE];
     },

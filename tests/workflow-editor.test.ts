@@ -200,11 +200,9 @@ describe("trigger regression corpus (#88 boundaries)", () => {
     const { hasTrigger, buildArmedWorkflowPrompt } = await load();
     // Honest: the bare word IS a standalone token here, so the lexical arm fires.
     assert.equal(hasTrigger("the workflow tool is slow"), true);
-    // But the armed banner leads with the decision boundary, so a "talk about the
-    // tool" turn is answered directly rather than forced into a workflow.
+    // Authorization leaves the model free to answer directly, without requiring use.
     const armed = buildArmedWorkflowPrompt("the workflow tool is slow", { reason: "keyword" });
-    assert.match(armed, /answer it directly and stay/i);
-    assert.match(armed, /arming authorizes the tool, it does not force it/i);
+    assert.match(armed, /Workflow use is authorized for this turn, not required/);
     assert.ok(!/\bMUST\b/.test(armed));
   });
 });
@@ -256,52 +254,16 @@ describe("buildArmedWorkflowPrompt", () => {
     assert.ok(result.startsWith("hello world"), "should start with hello world");
   });
 
-  it("arms (authorizes) rather than forces — no MUST/ONLY/'Do NOT answer' language", async () => {
+  it("uses the exact authorization banner without delegation or delivery instructions", async () => {
     const { buildArmedWorkflowPrompt } = await load();
-    const result = buildArmedWorkflowPrompt("test");
-    assert.ok(result.includes("workflows mode armed"), "should announce armed mode");
-    assert.ok(result.includes("`workflow` tool"), "should still name the workflow tool");
-    assert.ok(!/\bMUST\b/.test(result), "must not force with MUST");
-    assert.ok(!/ONLY acceptable/i.test(result), "must not force with 'ONLY acceptable'");
-    assert.ok(!/Do NOT (instead|answer)/i.test(result), "must not forbid answering directly");
-    assert.ok(
-      result.includes("answer it directly") || result.includes("does not force"),
-      "should permit answering a question directly",
+    assert.equal(
+      buildArmedWorkflowPrompt("test"),
+      "test\n\n---\n[Workflow use is authorized for this turn, not required.\nReason: workflow trigger word detected.]",
     );
-  });
-
-  it("leads with the decision boundary, not with 'call the tool' (#P3)", async () => {
-    const { buildArmedWorkflowPrompt } = await load();
-    const result = buildArmedWorkflowPrompt("test");
-    const bannerStart = result.indexOf("[workflows mode armed");
-    assert.ok(bannerStart >= 0, "should have the armed banner");
-    const decideIdx = result.indexOf("Decide first");
-    const callToolIdx = result.indexOf("calling the `workflow` tool");
-    assert.ok(decideIdx >= 0, "should state the decision boundary");
-    assert.ok(callToolIdx >= 0, "should still tell it how to call the tool");
-    assert.ok(decideIdx < callToolIdx, "the decision boundary must come BEFORE the call-the-tool instruction");
-  });
-
-  it("carries the #89 background/deliver-back reassurance (no idle-at-prompt worry)", async () => {
-    const { buildArmedWorkflowPrompt } = await load();
-    const result = buildArmedWorkflowPrompt("test");
-    assert.match(result, /runs in the background by default/i);
-    assert.match(result, /delivered back into the conversation automatically/i);
-    assert.match(result, /that's expected, not a stall/i);
-    assert.match(result, /pass background:false if the user is waiting for the result inline/i);
-  });
-
-  it("states the truthful opt-in reason per path (keyword vs effort) (#P3)", async () => {
-    const { buildArmedWorkflowPrompt } = await load();
-    const keyword = buildArmedWorkflowPrompt("test", { reason: "keyword" });
-    assert.match(keyword, /you typed the workflow trigger word/i);
-    assert.doesNotMatch(keyword, /standing effort mode/i);
-
-    const effort = buildArmedWorkflowPrompt("test", { reason: "effort" });
-    assert.match(effort, /standing effort mode armed this turn/i);
-    assert.match(effort, /you did not explicitly ask for a workflow/i);
-    // The effort path must NOT falsely claim the user typed the trigger word.
-    assert.doesNotMatch(effort, /you typed the workflow trigger word/i);
+    assert.equal(
+      buildArmedWorkflowPrompt("test", { reason: "effort" }),
+      "test\n\n---\n[Workflow use is authorized for this turn, not required.\nReason: standing effort mode.]",
+    );
   });
 
   it("defaults the reason to keyword when none is given", async () => {
@@ -334,23 +296,12 @@ describe("buildArmedWorkflowPrompt", () => {
 });
 
 describe("buildForcedWorkflowPrompt (/workflows run)", () => {
-  it("forces — no 'if it's a question just answer' escape (#P5)", async () => {
+  it("uses the exact explicit execution banner", async () => {
     const { buildForcedWorkflowPrompt } = await load();
-    const result = buildForcedWorkflowPrompt("audit the repo");
-    assert.ok(result.startsWith("audit the repo"), "starts with the original prompt");
-    assert.match(result, /\/workflows run/, "identifies the explicit command");
-    assert.match(result, /Call the `workflow` tool now/i, "tells the model to run the workflow");
-    // The forcing directive must NOT offer the question-answer escape the armed banner has.
-    assert.doesNotMatch(result, /just talk \(about workflows/i);
-    assert.doesNotMatch(result, /answer it directly and stay/i);
-    assert.match(result, /do not answer in prose instead of running the workflow/i);
-  });
-
-  it("still carries the #89 background/deliver-back reassurance", async () => {
-    const { buildForcedWorkflowPrompt } = await load();
-    const result = buildForcedWorkflowPrompt("audit the repo");
-    assert.match(result, /runs in the background by default/i);
-    assert.match(result, /delivered back into the conversation automatically/i);
+    assert.equal(
+      buildForcedWorkflowPrompt("audit the repo"),
+      "audit the repo\n\n---\n[The user explicitly requested a workflow run. Call the `workflow` tool.]",
+    );
   });
 
   it("does NOT reintroduce the MUST/ONLY forcing language that caused #88/#89", async () => {
@@ -791,21 +742,15 @@ describe("installWorkflowKeywordArming", () => {
     assert.ok(inputHandler, "input handler should be registered");
     const result = inputHandler({ source: "interactive", text });
 
-    // The effort path arms on ANY substantive message, so its directive also
-    // carries the conversational-escape (skip the workflow on trivial turns) and
-    // states the truthful "effort" opt-in reason (not "the word you typed").
-    const effortExtra = [effortDirective("high"), mod.EFFORT_CONVERSATIONAL_ESCAPE].filter(Boolean).join(" ");
+    // Effort adds only tier guidance; the shared banner already permits declining.
     assert.deepEqual(result, {
       action: "transform",
-      text: mod.buildArmedWorkflowPrompt(text, { reason: "effort", extraDirective: effortExtra }),
+      text: mod.buildArmedWorkflowPrompt(text, { reason: "effort", extraDirective: effortDirective("high") }),
     });
     const transformed = (result as { text: string }).text;
-    assert.match(
-      transformed,
-      /skip the workflow and just respond directly/,
-      "effort path allows skipping the workflow",
-    );
-    assert.match(transformed, /standing effort mode armed this turn/i, "effort path states the truthful reason");
+    assert.match(transformed, /authorized for this turn, not required/);
+    assert.match(transformed, /Reason: standing effort mode\./);
+    assert.doesNotMatch(transformed, /skip the workflow and just respond directly/);
     assert.ok(!/\bMUST\b/.test(transformed), "effort path must not force with MUST");
     assert.ok(tools.includes(mod.WORKFLOW_TOOL_NAME), "effort mode should still add the workflow tool");
   });

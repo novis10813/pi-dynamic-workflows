@@ -1,6 +1,6 @@
 node_modules/
 node_modules
-dist/
+# Keep compiled ESM tracked so Pi Git installs work without a build step.
 .pi/
 .env
 .DS_Store

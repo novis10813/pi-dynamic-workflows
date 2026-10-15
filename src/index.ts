@@ -154,6 +154,7 @@ export {
   WORKFLOW_CAPABILITY_DEFINITION,
   WorkflowCapabilityContractError,
 } from "./workflow-capability-contract.js";
+export type { RunCheckOptions, RunCheckResult } from "./workflow-check.js";
 export { registerWorkflowCommands } from "./workflow-commands.js";
 export type {
   WorkflowControlInput,
@@ -184,6 +185,14 @@ export {
   workflowProjectPaths,
   workflowUserSavedDir,
 } from "./workflow-paths.js";
+export type {
+  RepairReviewerResult,
+  RepairReviewerVerdict,
+  RepairRoundContext,
+  RepairRoundReport,
+  RepairUntilPassOptions,
+  RepairUntilPassResult,
+} from "./workflow-repair.js";
 export type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
 export {
   assertSafeSavedWorkflowName,

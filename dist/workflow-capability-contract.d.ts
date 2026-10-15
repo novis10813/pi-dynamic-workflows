@@ -91,6 +91,8 @@ export interface WorkflowRuntimeImplementations {
     retry: unknown;
     gate: unknown;
     checkpoint: unknown;
+    runCheck: unknown;
+    repairUntilPass: unknown;
     log: unknown;
     phase: unknown;
     args: unknown;

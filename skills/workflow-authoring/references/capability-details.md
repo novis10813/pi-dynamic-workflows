@@ -187,6 +187,42 @@ Every exact fact below is projected from the installed extension's capability co
 - Constraint: status exposes only checkpoint ID, kind, and status; the durable response never enters model-visible output
 - Constraint: durable checkpoint responses resume the same run ID, are journaled before continuation, and reject stale or conflicting delivery
 
+<a id="runcheck"></a>
+## runCheck
+
+- Classification: `runtime-global`
+- Support: `supported`
+- Signature: `runCheck({ id: string, command: string, args?: string[], cwd?: string, timeoutMs?: number }) => Promise<RunCheckResult>`
+- Constraint: host-backed spawn with shell false and inherited environment; no agent or model execution
+- Constraint: id and command must be nonblank strings; args defaults to an array of strings; cwd resolves relative to workflow cwd
+- Constraint: timeoutMs defaults to 120000 and must be a positive finite integer; invalid options throw nonrecoverable SCRIPT_VALIDATION_ERROR before spawn
+- Constraint: result includes id, command, args, resolved cwd, status, exitCode, signal, timedOut, durationMs, stdout, stderr, truncation flags, and optional error
+- Constraint: PASS only for exit code 0 without timeout, error, or signal; ordinary nonzero exits FAIL; timeout, spawn failure, and signals ERROR
+- Constraint: quiet success is valid; output does not prove tests ran and test counts are not inferred
+- Constraint: returns UTF-8-safe 32 KiB tails per stream; audit logs retain 1 KiB serialized previews, at most 4 KiB per entry and 128 KiB total across the run tree, then one suppression notice
+- Constraint: cancellation throws WORKFLOW_ABORTED; timeout and abort use bounded TERM to KILL escalation for POSIX process groups (Windows child fallback)
+- Constraint: normal host exit and SIGINT, SIGTERM, SIGHUP, SIGQUIT, or SIGUSR2 immediately kill tracked checks while preserving existing host handlers; crashes, other fatal signals, SIGKILL, and descendants escaping the process group are outside cleanup guarantees
+- Constraint: always executes live, consumes a callSeq position, invalidates downstream resume prefixes including nested workflows, and never journals mechanical results
+
+<a id="repairuntilpass"></a>
+## repairUntilPass
+
+- Classification: `runtime-global`
+- Support: `supported`
+- Signature: `repairUntilPass({ reviewers: [{ id, run }], checks: [RunCheckOptions], repair, maxRepairs?: number }) => Promise<{ ok: true; rounds: number; repairs: number; report: RepairRoundReport }>`
+- Constraint: requires nonempty reviewers and command checks with unique ids; validates and snapshots the complete plan before executing it; invalid plans return a rejected promise
+- Constraint: reviewer callbacks receive { round, repairs } and must return { verdict: PASS or FAIL, findings: string[] }; all reviewer verdicts must be exactly PASS and all host checks must PASS
+- Constraint: maxRepairs defaults to 2 and must be a nonnegative safe integer; zero validates once without repairing; the initial implementation belongs before this helper
+- Constraint: each failed validation round awaits repair(report, oneBasedRepairNumber), then reruns every reviewer and check; a missing or null repair result fails verification
+- Constraint: missing or malformed reviewer evidence, reviewer exceptions, and command ERROR outcomes stop with nonrecoverable VERIFICATION_FAILED rather than consuming code repairs
+- Constraint: exhaustion throws nonrecoverable REPAIR_LIMIT_EXCEEDED with final round evidence in error.details; only success returns ok true
+- Constraint: must be awaited: phase transitions are rejected while any repair gate is pending; gate failures are sticky across the shared run tree and prevent later phase transitions and terminal success even if caught or not awaited
+- Constraint: every validation round exposes frozen evidence; completed rounds log bounded previews under the shared 128 KiB check audit budget; full final evidence stays in the returned report or thrown error.details
+- Constraint: executes reviewers and checks sequentially; callers keep routing, schemas, implementation, and reviewer prompts inside their callbacks and must await all writes and forbid reviewer/check code edits
+- Constraint: always starts a fresh resume barrier before reviewers, including across nested workflows; reviewer and repair agent calls still count against ordinary runtime limits and cancellation/checkpoint/provider errors propagate
+- Constraint: maxRepairs applies per helper execution, not across explicit resumes; resume restarts validation from the current checkout with a fresh repair allowance, so repairs must be safe to repeat
+- Constraint: outside pending or failed repair gates, phase remains a label, not a repository lock or transactional snapshot; unrelated writers and commands that silently skip tests require project-specific controls
+
 <a id="log"></a>
 ## log
 

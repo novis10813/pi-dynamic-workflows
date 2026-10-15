@@ -45,6 +45,7 @@ const REQUIRED_RESOURCES = [
   `${SKILL_ROOT}/examples/saved-nested-workflows.js`,
   `${SKILL_ROOT}/examples/bounded-semantic-retry.js`,
   `${SKILL_ROOT}/examples/validated-gate.js`,
+  `${SKILL_ROOT}/examples/checked-repair.js`,
   `${SKILL_ROOT}/examples/structured-output.js`,
   `${SKILL_ROOT}/examples/defensive-json-parsing.js`,
 ] as const;

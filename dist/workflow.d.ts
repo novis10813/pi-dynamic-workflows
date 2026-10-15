@@ -119,6 +119,18 @@ export interface SharedRuntime {
      * after the run has been marked complete and torn down. See the drain below.
      */
     inFlight: Set<Promise<unknown>>;
+    /** Host checks terminate within their own bounded cleanup, even with a short agent drain grace. */
+    inFlightChecks?: Set<Promise<unknown>>;
+    hasRunChecks?: boolean;
+    /** Automatic check audit budget shared by every nested frame; user log() is separate. */
+    checkAuditBytes?: number;
+    checkAuditSuppressed?: boolean;
+    /** Repair gates fail closed even when their promise was accidentally not awaited. */
+    pendingRepairGates?: number;
+    hasRepairGates?: boolean;
+    verificationFailure?: {
+        error: unknown;
+    };
     /** Named conversations currently executing anywhere in this run tree. */
     activeThreads: Set<string>;
     /** Whether a threaded call has invalidated journal replay for the remaining run tree. */
@@ -140,7 +152,7 @@ export type WorkflowRuntimeEvent = {
     helper: "verify" | "judgePanel" | "completenessCheck";
 } | {
     type: "control-attempt";
-    helper: "retry" | "gate";
+    helper: "retry" | "gate" | "repairUntilPass";
     attempt: number;
     accepted: boolean;
 };

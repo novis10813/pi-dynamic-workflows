@@ -37,12 +37,12 @@
     },
     "workflowAuthoringSkillCorpus": {
       "serialization": "sum of UTF-8 bytes for every file under skills/workflow-authoring",
-      "files": 28,
-      "bytes": 83465
+      "files": 29,
+      "bytes": 94030
     },
     "representativeAuthoringProfiles": {
       "serialization": "sum of UTF-8 bytes for each profile's declared package-relative files",
-      "medianBytes": 14337,
+      "medianBytes": 15848,
       "profiles": [
         {
           "name": "write",
@@ -54,7 +54,7 @@
             "skills/workflow-authoring/examples/fan-out-and-synthesize.js",
             "skills/workflow-authoring/examples/structured-output.js"
           ],
-          "bytes": 13614
+          "bytes": 13645
         },
         {
           "name": "edit",
@@ -66,7 +66,7 @@
             "skills/workflow-authoring/examples/phased-budgets.js",
             "skills/workflow-authoring/examples/saved-nested-workflows.js"
           ],
-          "bytes": 19278
+          "bytes": 19309
         },
         {
           "name": "review",
@@ -77,7 +77,7 @@
             "skills/workflow-authoring/references/quality-helpers.md",
             "skills/workflow-authoring/examples/adversarial-verification.js"
           ],
-          "bytes": 13950
+          "bytes": 13981
         },
         {
           "name": "debug",
@@ -88,7 +88,7 @@
             "skills/workflow-authoring/references/specialized-helpers.md",
             "skills/workflow-authoring/examples/validated-gate.js"
           ],
-          "bytes": 14724
+          "bytes": 17715
         },
         {
           "name": "loop",
@@ -101,7 +101,7 @@
             "skills/workflow-authoring/examples/loop-until-done.js",
             "skills/workflow-authoring/examples/structured-output.js"
           ],
-          "bytes": 19814
+          "bytes": 19845
         },
         {
           "name": "retry",
@@ -113,7 +113,7 @@
             "skills/workflow-authoring/examples/bounded-semantic-retry.js",
             "skills/workflow-authoring/examples/structured-output.js"
           ],
-          "bytes": 12592
+          "bytes": 12623
         }
       ]
     }

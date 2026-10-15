@@ -28,7 +28,9 @@ const EXPECTED_RUNTIME_GLOBALS = [
   "phase",
   "pipeline",
   "process",
+  "repairUntilPass",
   "retry",
+  "runCheck",
   "verify",
   "workflow",
 ] as const;

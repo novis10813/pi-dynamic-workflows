@@ -39,6 +39,7 @@ export type { AgentOptions, JournalEntry, SharedRuntime, WorkflowCheckpoint, Wor
 export { parseWorkflowScript, runWorkflow } from "./workflow.js";
 export type { AlignmentEvidence, CapabilityDescriptor, CapabilityDiagnostic, DynamicReferenceDescriptor, OptionDescriptor, OptionShape, PresentAtVersion, RuntimeBindingAssembly, StaticCapabilityFact, WorkflowCapabilityContract, WorkflowCapabilityDefinition, WorkflowRuntimeImplementations, } from "./workflow-capability-contract.js";
 export { CapabilityClassification, CapabilityOrigin, CapabilitySupport, DiagnosticSeverity, DiscoveryPlacement, defineWorkflowCapabilityContract, WORKFLOW_CAPABILITY_CONTRACT, WORKFLOW_CAPABILITY_DEFINITION, WorkflowCapabilityContractError, } from "./workflow-capability-contract.js";
+export type { RunCheckOptions, RunCheckResult } from "./workflow-check.js";
 export { registerWorkflowCommands } from "./workflow-commands.js";
 export type { WorkflowControlInput, WorkflowControlRunDetails, WorkflowControlToolOptions, } from "./workflow-control-tool.js";
 export { createWorkflowControlTool } from "./workflow-control-tool.js";
@@ -47,6 +48,7 @@ export type { ManagedRun, WorkflowManagerOptions, WorkflowResumeOptions } from "
 export { WorkflowManager } from "./workflow-manager.js";
 export type { WorkflowProjectPaths } from "./workflow-paths.js";
 export { WORKFLOW_HOME_RELATIVE_DIR, WORKFLOW_PROJECTS_SUBDIR, workflowHomeDir, workflowProjectKey, workflowProjectPaths, workflowUserSavedDir, } from "./workflow-paths.js";
+export type { RepairReviewerResult, RepairReviewerVerdict, RepairRoundContext, RepairRoundReport, RepairUntilPassOptions, RepairUntilPassResult, } from "./workflow-repair.js";
 export type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
 export { assertSafeSavedWorkflowName, createWorkflowStorage, isSafeSavedWorkflowName, resolveSavedScriptPath, } from "./workflow-saved.js";
 export type { WorkflowSettings, WorkflowSettingsOptions, WorkflowSettingsStore } from "./workflow-settings.js";

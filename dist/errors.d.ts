@@ -61,6 +61,10 @@ export declare enum WorkflowErrorCode {
     MODEL_SPAWN_REJECTED = "MODEL_SPAWN_REJECTED",
     /** Agent execution failed. */
     AGENT_EXECUTION_ERROR = "AGENT_EXECUTION_ERROR",
+    /** A required reviewer, command, or repair could not produce usable evidence. */
+    VERIFICATION_FAILED = "VERIFICATION_FAILED",
+    /** Validation still failed after the permitted code repairs. */
+    REPAIR_LIMIT_EXCEEDED = "REPAIR_LIMIT_EXCEEDED",
     /** Run state persistence failed. */
     PERSISTENCE_ERROR = "PERSISTENCE_ERROR",
     /** Unknown error. */

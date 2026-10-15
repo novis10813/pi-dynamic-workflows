@@ -37,6 +37,10 @@ export var WorkflowErrorCode;
     WorkflowErrorCode["MODEL_SPAWN_REJECTED"] = "MODEL_SPAWN_REJECTED";
     /** Agent execution failed. */
     WorkflowErrorCode["AGENT_EXECUTION_ERROR"] = "AGENT_EXECUTION_ERROR";
+    /** A required reviewer, command, or repair could not produce usable evidence. */
+    WorkflowErrorCode["VERIFICATION_FAILED"] = "VERIFICATION_FAILED";
+    /** Validation still failed after the permitted code repairs. */
+    WorkflowErrorCode["REPAIR_LIMIT_EXCEEDED"] = "REPAIR_LIMIT_EXCEEDED";
     /** Run state persistence failed. */
     WorkflowErrorCode["PERSISTENCE_ERROR"] = "PERSISTENCE_ERROR";
     /** Unknown error. */

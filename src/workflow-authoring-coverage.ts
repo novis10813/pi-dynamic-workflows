@@ -33,7 +33,7 @@ export const WORKFLOW_COMPREHENSION_SCENARIO_IDS = COMPREHENSION_SCENARIOS.map((
 export const WORKFLOW_AUTHORING_FROZEN_FILES = [
   {
     path: "skills/workflow-authoring/SKILL.md",
-    sha256: "7d9eae3326bf90af8b42bb6a0c92848c984638a9019e1524ed72ed51ac172a08",
+    sha256: "6317825d8e5608c9c219baa6bfa0f106cef12635e0379a9d3d995d0a96662eaa",
   },
   {
     path: "skills/workflow-authoring/references/runtime.md",
@@ -45,7 +45,7 @@ export const WORKFLOW_AUTHORING_FROZEN_FILES = [
   },
   {
     path: "skills/workflow-authoring/references/specialized-helpers.md",
-    sha256: "ef95cc7fb9c68e55cb64cc7f63814df4059dbffa6c3d06f63f13d21819c4b863",
+    sha256: "1ebbb554b38cb2e853c89dcafab4c20ee13f7d27d1cd0c791474eb862c669162",
   },
   {
     path: "skills/workflow-authoring/references/lifecycle.md",
@@ -99,7 +99,7 @@ const WRITE_EDIT_ROUTE: ProtectedGuidanceSurface = {
 const HELPER_ROUTE: ProtectedGuidanceSurface = {
   path: SKILL_PATH,
   requiredText:
-    "- **Helper task:** read [quality helpers](references/quality-helpers.md) only for `verify` or `judgePanel`, the [retry helper](references/retry-helper.md) only for `retry`, and [specialized helpers](references/specialized-helpers.md) only for `completenessCheck`, `loopUntilDry`, `gate`, or `checkpoint`.",
+    "- **Helper task:** read [quality helpers](references/quality-helpers.md) only for `verify` or `judgePanel`, the [retry helper](references/retry-helper.md) only for `retry`, and [specialized helpers](references/specialized-helpers.md) only for `completenessCheck`, `loopUntilDry`, `gate`, `checkpoint`, `runCheck`, or `repairUntilPass`.",
 };
 const ROUTING_ROUTE: ProtectedGuidanceSurface = {
   path: SKILL_PATH,
@@ -152,6 +152,21 @@ const FROZEN_GUIDANCE_BY_CAPABILITY: Readonly<Record<string, readonly ProtectedG
       path: SPECIALIZED_HELPERS_PATH,
       requiredText:
         "`completenessCheck(args, results)` | Consumes one logical agent slot and preflights that capacity before starting the critic; an external pause/stop abort wins before the critic starts. Returns `{ complete, missing? }` or recoverable `null`. The critic sees only the first 4,000 serialized characters, so chunk or summarize larger evidence. Treat the verdict as advisory.",
+    },
+  ],
+  "workflow.runtime.runCheck": [
+    {
+      path: SPECIALIZED_HELPERS_PATH,
+      anchor: "cli-checks-and-bounded-repair",
+      requiredText:
+        "Use project-supplied executable commands and argument arrays, not shell strings or agent-reported test results.",
+    },
+  ],
+  "workflow.runtime.repairUntilPass": [
+    {
+      path: SPECIALIZED_HELPERS_PATH,
+      anchor: "cli-checks-and-bounded-repair",
+      requiredText: "Await the helper before advancing: every reviewer and command must PASS in the same round.",
     },
   ],
   "workflow.runtime.gate": [
@@ -466,6 +481,8 @@ const HELPER_CAPABILITY_IDS = new Set([
   "workflow.runtime.retry",
   "workflow.runtime.gate",
   "workflow.runtime.checkpoint",
+  "workflow.runtime.runCheck",
+  "workflow.runtime.repairUntilPass",
 ]);
 
 const CONTRACT_COVERAGE: readonly WorkflowAuthoringCoverageEntry[] = WORKFLOW_CAPABILITY_DEFINITION.capabilities

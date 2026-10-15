@@ -24,6 +24,8 @@ import { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing
 import { validateThinkingLevel } from "./model-spec.js";
 import { createAgentStoreTools, SharedStore } from "./shared-store.js";
 import { WORKFLOW_CAPABILITY_CONTRACT, type WorkflowRuntimeImplementations } from "./workflow-capability-contract.js";
+import { checkAuditEntry, executeRunCheck, type RunCheckOptions, validateRunCheck } from "./workflow-check.js";
+import { createRepairUntilPass, repairAuditEntry } from "./workflow-repair.js";
 import { createWorktree, removeWorktree, type Worktree } from "./worktree.js";
 
 /**
@@ -165,6 +167,16 @@ export interface SharedRuntime {
    * after the run has been marked complete and torn down. See the drain below.
    */
   inFlight: Set<Promise<unknown>>;
+  /** Host checks terminate within their own bounded cleanup, even with a short agent drain grace. */
+  inFlightChecks?: Set<Promise<unknown>>;
+  hasRunChecks?: boolean;
+  /** Automatic check audit budget shared by every nested frame; user log() is separate. */
+  checkAuditBytes?: number;
+  checkAuditSuppressed?: boolean;
+  /** Repair gates fail closed even when their promise was accidentally not awaited. */
+  pendingRepairGates?: number;
+  hasRepairGates?: boolean;
+  verificationFailure?: { error: unknown };
   /** Named conversations currently executing anywhere in this run tree. */
   activeThreads: Set<string>;
   /** Whether a threaded call has invalidated journal replay for the remaining run tree. */
@@ -176,7 +188,7 @@ export type WorkflowRuntimeEvent =
   | { type: "phase"; title: string; budget: number | null }
   | { type: "workflow"; stage: "start" | "end"; name: string; args: unknown }
   | { type: "quality"; stage: "start" | "end"; helper: "verify" | "judgePanel" | "completenessCheck" }
-  | { type: "control-attempt"; helper: "retry" | "gate"; attempt: number; accepted: boolean };
+  | { type: "control-attempt"; helper: "retry" | "gate" | "repairUntilPass"; attempt: number; accepted: boolean };
 
 /** Minimal injected agent surface used by the workflow runtime and deterministic tests. */
 export interface WorkflowAgentRunner {
@@ -677,7 +689,19 @@ export async function runWorkflow<T = unknown>(
     );
   };
 
+  const throwIfVerificationFailed = () => {
+    if (shared.verificationFailure) throw shared.verificationFailure.error;
+  };
   const phase = (title: string, phaseOptions?: { budget?: number }) => {
+    if (shared.hasRepairGates) {
+      throwIfAborted();
+      throwIfVerificationFailed();
+      if (shared.pendingRepairGates)
+        throw new WorkflowError(
+          "Await repairUntilPass() before entering another phase",
+          WorkflowErrorCode.SCRIPT_VALIDATION_ERROR,
+        );
+    }
     state.currentPhase = title;
     if (!state.phases.includes(title)) state.phases.push(title);
     // Carve a soft sub-budget from the run total for work done under this phase.
@@ -1771,6 +1795,90 @@ export async function runWorkflow<T = unknown>(
     return reply;
   };
 
+  const audit = (entry: string) => {
+    if (shared.checkAuditSuppressed) return;
+    const notice = JSON.stringify({ type: "check-log-suppressed", reason: "check audit budget exhausted" });
+    const used = shared.checkAuditBytes ?? 0;
+    // Reserve room for exactly one notice, included in the shared 128KiB budget.
+    if (used + Buffer.byteLength(entry) + Buffer.byteLength(notice) <= 128 * 1024) {
+      shared.checkAuditBytes = used + Buffer.byteLength(entry);
+      log(entry);
+    } else {
+      shared.checkAuditSuppressed = true;
+      shared.checkAuditBytes = used + Buffer.byteLength(notice);
+      log(notice);
+    }
+  };
+
+  const runCheck = (input: RunCheckOptions) => {
+    throwIfAborted();
+    const checkOptions = validateRunCheck(input, options.cwd ?? process.cwd());
+    const callIndex = state.callSeq++;
+    state.firstMiss = Math.min(state.firstMiss, callIndex);
+    // Mechanical observations are always live, including across nested frames.
+    shared.resumeBarrierReached = true;
+    const signals = [shared.runFatalController.signal];
+    if (options.signal) signals.push(options.signal);
+    shared.hasRunChecks = true;
+    shared.inFlightChecks ??= new Set<Promise<unknown>>();
+    const checks = shared.inFlightChecks;
+    const call = executeRunCheck(checkOptions, signals).then((result) => {
+      throwIfAborted();
+      audit(checkAuditEntry(result));
+      return result;
+    });
+    shared.inFlight.add(call);
+    checks.add(call);
+    call
+      .catch(() => {})
+      .finally(() => {
+        shared.inFlight.delete(call);
+        checks.delete(call);
+      });
+    return call;
+  };
+
+  const repairPlan = createRepairUntilPass({
+    validateCheck: (input) => validateRunCheck(input, options.cwd ?? process.cwd()),
+    runCheck,
+    throwIfAborted,
+    fresh: () => {
+      const callIndex = state.callSeq++;
+      state.firstMiss = Math.min(state.firstMiss, callIndex);
+      shared.resumeBarrierReached = true;
+    },
+    observe: (report) => {
+      audit(repairAuditEntry(report));
+      options.onRuntimeEvent?.({
+        type: "control-attempt",
+        helper: "repairUntilPass",
+        attempt: report.round,
+        accepted: report.ok,
+      });
+    },
+  });
+  const repairUntilPass = (input: Parameters<typeof repairPlan>[0]) => {
+    shared.hasRepairGates = true;
+    shared.pendingRepairGates = (shared.pendingRepairGates ?? 0) + 1;
+    let planned: ReturnType<typeof repairPlan>;
+    try {
+      planned = repairPlan(input);
+    } catch (error) {
+      planned = Promise.reject(error);
+    }
+    const call = planned
+      .catch((error) => {
+        shared.verificationFailure ??= { error };
+        throw error;
+      })
+      .finally(() => {
+        shared.pendingRepairGates = (shared.pendingRepairGates ?? 1) - 1;
+      });
+    shared.inFlight.add(call);
+    call.catch(() => {}).finally(() => shared.inFlight.delete(call));
+    return call;
+  };
+
   const runtimeImplementations = {
     agent,
     parallel,
@@ -1783,6 +1891,8 @@ export async function runWorkflow<T = unknown>(
     retry,
     gate,
     checkpoint,
+    runCheck,
+    repairUntilPass,
     log,
     phase,
     args: options.args,
@@ -1973,6 +2083,9 @@ export async function runWorkflow<T = unknown>(
         options.signal?.removeEventListener("abort", externalWake);
         shared.runFatalController.signal.removeEventListener("abort", fatalWake);
       }
+      // Unlike cooperative agents, host checks have bounded termination. Never
+      // abandon their cleanup, including checks started in nested frames.
+      if (shared.inFlightChecks?.size) await Promise.allSettled([...shared.inFlightChecks]);
       // A bounded abort drain can intentionally leave a signal-ignoring runner
       // in flight. Reconcile the latest terminal/provisional usage while the
       // manager is still live, then seal every callback retained by that runner.
@@ -2004,6 +2117,9 @@ export async function runWorkflow<T = unknown>(
         }
       }
       store.dispose();
+      // A stop during the drain must not turn an unawaited check into success.
+      if (runSucceeded && (shared.hasRunChecks || shared.hasRepairGates)) throwIfAborted();
+      if (runSucceeded) throwIfVerificationFailed();
     }
   }
 }
